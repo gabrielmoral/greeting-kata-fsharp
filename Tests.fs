@@ -3,6 +3,10 @@ module Tests
 open System
 open Xunit
 
+type Receptor =
+| Simple of string
+| Multiple of string list
+
 let private isUpper (name:string) =
     let rec checkUpper isUpper arrayName =
         match arrayName with
@@ -12,6 +16,8 @@ let private isUpper (name:string) =
     
     checkUpper false (name.ToCharArray() |> Array.toList)
 
+let private composeNames (names:string list) =
+     String.Join(" and ",names)
 
 let shoutGreeting greeting name = 
     let (greeting:string) = greeting name
@@ -22,19 +28,25 @@ let greet' greeting name =
     |true ->  shoutGreeting greeting name
     |false -> greeting name
 
-let greet name =
+let greet receptor =
     let greeting = sprintf "Hello, %s"
+    let properName = match receptor with
+                        |Simple name -> match name with
+                                        |"" -> "my friend"
+                                        |_ -> name 
+                        |Multiple names -> composeNames names
 
-    match name with
-    |"" -> greet' greeting "my friend"
-    |_ -> greet' greeting name 
-
+    greet' greeting properName
 
 [<Fact>]
 let ``Hello name`` () =
-    Assert.Equal("Hello, Gabriel",greet("Gabriel"))
-    Assert.Equal("Hello, my friend",greet(""))
+    Assert.Equal("Hello, Gabriel",greet(Simple "Gabriel"))
+    Assert.Equal("Hello, my friend",greet(Simple ""))
 
 [<Fact>]
 let ``Shout greeting`` () =
-    Assert.Equal("HELLO, GABRIEL",greet("GABRIEL"))
+    Assert.Equal("HELLO, GABRIEL",greet(Simple "GABRIEL"))
+
+[<Fact>]
+let ``Multiple greetings`` () =
+    Assert.Equal("Hello, Gabriel and Pepe",greet(Multiple ["Gabriel"; "Pepe"]))
