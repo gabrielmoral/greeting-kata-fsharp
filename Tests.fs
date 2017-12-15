@@ -17,7 +17,14 @@ let private isUpper (name:string) =
     checkUpper false (name.ToCharArray() |> Array.toList)
 
 let private composeNames (names:string list) =
-     String.Join(" and ",names)
+    let composeMultipleNames names lastConjunction = 
+        let reversedNames = names |> List.rev
+        lastConjunction + reversedNames.Head :: reversedNames.Tail |> List.rev
+
+    if names.Length = 2 then 
+        String.Join("", composeMultipleNames names " and ")
+    else 
+        String.Join(", ", composeMultipleNames names "and ")
 
 let shoutGreeting greeting name = 
     let (greeting:string) = greeting name
@@ -50,3 +57,4 @@ let ``Shout greeting`` () =
 [<Fact>]
 let ``Multiple greetings`` () =
     Assert.Equal("Hello, Gabriel and Pepe",greet(Multiple ["Gabriel"; "Pepe"]))
+    Assert.Equal("Hello, Gabriel, Pepe, and Pepa",greet(Multiple ["Gabriel"; "Pepe"; "Pepa"]))
