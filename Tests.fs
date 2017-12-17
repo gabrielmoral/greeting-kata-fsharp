@@ -16,34 +16,47 @@ let private isUpper (name:string) =
     
     checkUpper false (name.ToCharArray() |> Array.toList)
 
-let private composeNames (names:string list) =
-    let composeMultipleNames names lastConjunction = 
-        let reversedNames = names |> List.rev
-        lastConjunction + reversedNames.Head :: reversedNames.Tail |> List.rev
+let private decompose (names:string list) =
+    names |> List.filter (isUpper >> not),  names |> List.filter isUpper
 
-    if names.Length = 2 then 
-        String.Join("", composeMultipleNames names " and ")
-    else 
-        String.Join(", ", composeMultipleNames names "and ")
+let greeting = sprintf "Hello, %s"
+let addicionalGreeting = sprintf " AND HELLO %s"
+
 
 let shoutGreeting greeting name = 
     let (greeting:string) = greeting name
     greeting.ToUpper()
 
-let greet' greeting name = 
-    match isUpper name with
-    |true ->  shoutGreeting greeting name
-    |false -> greeting name
+let greet' greeting names =
+    let composeMultipleNames names lastConjunction = 
+        let reversedNames = names |> List.rev
+        lastConjunction + reversedNames.Head :: reversedNames.Tail |> List.rev
+
+    let (normalNames:string list), (shoutNames:string list) = names
+    
+    let normalGreeting = match normalNames with
+                            |[] -> ""
+                            |[_] -> greeting normalNames.Head
+                            |[_;_] -> greeting (String.Join("", composeMultipleNames normalNames " and "))
+                            |_ -> greeting (String.Join(", ", composeMultipleNames normalNames "and "))
+
+    let shoutGreeting = match shoutNames, normalNames with
+                        |[],_ -> ""
+                        |[_], [] -> shoutGreeting greeting shoutNames.Head
+                        |[_], _::_ -> shoutGreeting addicionalGreeting shoutNames.Head
+                        |[_;_],_ -> shoutGreeting addicionalGreeting (String.Join("", composeMultipleNames shoutNames " and "))
+                        |_ -> shoutGreeting addicionalGreeting (String.Join(", ", composeMultipleNames shoutNames "and "))
+
+    normalGreeting + shoutGreeting
 
 let greet receptor =
-    let greeting = sprintf "Hello, %s"
-    let properName = match receptor with
-                        |Simple name -> match name with
-                                        |"" -> "my friend"
-                                        |_ -> name 
-                        |Multiple names -> composeNames names
+    let names = match receptor with
+                |Simple name -> match name with
+                                |"" -> ["my friend"]
+                                |_ -> [name] 
+                |Multiple names -> names
 
-    greet' greeting properName
+    greet' greeting (decompose names)
 
 [<Fact>]
 let ``Hello name`` () =
@@ -58,3 +71,13 @@ let ``Shout greeting`` () =
 let ``Multiple greetings`` () =
     Assert.Equal("Hello, Gabriel and Pepe",greet(Multiple ["Gabriel"; "Pepe"]))
     Assert.Equal("Hello, Gabriel, Pepe, and Pepa",greet(Multiple ["Gabriel"; "Pepe"; "Pepa"]))
+
+[<Fact>]
+let ``Multiple greetings shouting`` () =
+    Assert.Equal("Hello, Gabriel AND HELLO PEPE",greet(Multiple ["Gabriel"; "PEPE"]))
+    Assert.Equal("Hello, Gabriel and Pepa AND HELLO PEPE",greet(Multiple ["Gabriel"; "PEPE"; "Pepa"]))
+    Assert.Equal("Hello, Gabriel and Pepa AND HELLO PEPE AND PEPITO",greet(Multiple ["Gabriel"; "PEPE"; "Pepa"; "PEPITO"]))
+
+
+
+//Hello, {Gabriel} and {Pepa} AND HELLO {PEPE} is a template, generatethe template?
